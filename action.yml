@@ -1,0 +1,37 @@
+name: "Enforce Version Bump"
+description: "Enforces that the version number in the package.json file is bumped"
+inputs:
+  base-ref:
+    description: "The base branch to compare against"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout PR branch
+      uses: actions/checkout@v4.2.2
+      with:
+        fetch-depth: 0
+
+    - name: Fetch base branch
+      run: |
+        git fetch origin ${{ inputs.base-ref }}
+
+    - name: Compare package.json versions
+      shell: bash
+      run: |
+        git show origin/${{ inputs.base-ref }}:package.json > base_package.json
+        cp package.json head_package.json
+
+        BASE_VERSION=$(jq -r .version base_package.json)
+        HEAD_VERSION=$(jq -r .version head_package.json)
+
+        echo "Base version: $BASE_VERSION"
+        echo "Head version: $HEAD_VERSION"
+
+        if [ "$BASE_VERSION" = "$HEAD_VERSION" ]; then
+          echo "❌ Version was not updated in package.json"
+          exit 1
+        else
+          echo "✅ Version updated"
+        fi
